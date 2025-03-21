@@ -1,9 +1,9 @@
 <template>
   <!-- 左右联动选择器 -->
   <div
-    class="selector__wrapper"
+    class="selector_wrapper"
     :class="{
-      is__virtual: isVirtual,
+      is_virtual: isVirtual,
     }"
     :style="{
       '--wrap-width': `${props.width}px`,
@@ -13,10 +13,10 @@
       '--item-height': `${props.lineHeight}px`,
     }"
   >
-    <el-row class="selector__body">
-      <el-col :span="12" class="selector__left">
-        <div class="selector__left__header f-c-b">
-          <div class="selector__left__header__title">父级列表</div>
+    <el-row class="selector_wrapper__body">
+      <el-col :span="12" class="selector_body__left">
+        <div class="selector_body__left__header f_c_b">
+          <div class="selector_body__left__header__title">父级列表</div>
           <el-checkbox
             v-model="leftCheckAll"
             :indeterminate="leftIsIndeterminate"
@@ -25,7 +25,7 @@
             全选
           </el-checkbox>
         </div>
-        <div class="selector__left__search" v-if="showSearch">
+        <div class="selector_body__left__search" v-if="showSearch">
           <el-input
             v-model="search.left"
             placeholder="请输入内容"
@@ -33,10 +33,13 @@
             @input="(val) => handleSearch('left', val)"
           />
         </div>
-        <div class="selector__list selector__left__list" ref="leftListRef">
-          <div class="selector__list__virtual left__virtual">
+        <div
+          class="selector_body__list selector_body__left__list"
+          ref="leftListRef"
+        >
+          <div class="selector_body__list__virtual left__virtual">
             <div
-              class="selector__item selector__left__item"
+              class="selector_body__list__item selector_body__left__item"
               v-for="item in leftData"
               :key="item[options.key]"
               :style="{
@@ -44,7 +47,7 @@
               }"
             >
               <div
-                class="selector__left__item__checkbox f-c-s"
+                class="selector_body__left__item__checkbox f_c_s"
                 v-if="showRight"
               >
                 <el-checkbox
@@ -53,7 +56,7 @@
                   @change="handleCheckedChange('left', item)"
                 />
                 <div
-                  class="selector__left__item__label f-c-s"
+                  class="selector_body__left__item__label f_c_s"
                   :class="
                     active[options.key] === item[options.key] ? 'active' : ''
                   "
@@ -62,13 +65,13 @@
                   <div>{{ item[options.label] }}</div>
                   <span
                     v-if="!!item[options.children]?.length"
-                    class="selector__left__item__label__total__num ml10 fs12"
+                    class="selector_body__left__item__label__total__num ml10 fs12"
                   >
                     共 {{ item[options.children].length }} 项
                   </span>
                   <span
                     v-if="!!item.checkedNum && item.isIndeterminate"
-                    class="selector__left__item__label__selected__num ml5 fs12"
+                    class="selector_body__left__item__label__selected__num ml5 fs12"
                   >
                     已选 {{ item.checkedNum }} 项
                   </span>
@@ -85,9 +88,9 @@
           </div>
         </div>
       </el-col>
-      <el-col :span="12" class="selector__right" v-if="showRight">
-        <div class="selector__right__header f-c-b">
-          <div class="selector__right__header__title">子级列表</div>
+      <el-col :span="12" class="selector_body__right" v-if="showRight">
+        <div class="selector_body__right__header f_c_b">
+          <div class="selector_body__right__header__title">子级列表</div>
           <el-checkbox
             v-model="rightCheckAll"
             :indeterminate="rightIsIndeterminate"
@@ -96,7 +99,7 @@
             全选
           </el-checkbox>
         </div>
-        <div class="selector__right__search" v-if="showSearch">
+        <div class="selector_body__right__search" v-if="showSearch">
           <el-input
             v-model="search.right"
             placeholder="请输入内容"
@@ -104,10 +107,13 @@
             @input="(val) => handleSearch('right', val)"
           />
         </div>
-        <div class="selector__list selector__right__list" ref="rightListRef">
-          <div class="selector__list__virtual right__virtual">
+        <div
+          class="selector_body__list selector_body__right__list"
+          ref="rightListRef"
+        >
+          <div class="selector_body__list__virtual right__virtual">
             <div
-              class="selector__item selector__right__item"
+              class="selector_body__list__item selector_body__right__item"
               v-for="item in rightData"
               :key="item[options.key]"
               :style="{
@@ -125,7 +131,7 @@
         </div>
       </el-col>
     </el-row>
-    <el-row class="selector__footer f-c-e mt10">
+    <el-row class="selector_body__footer f_c_e mt10">
       <el-button @click="handleCancel">取消</el-button>
       <el-button type="primary" @click="handleConfirm">确定</el-button>
     </el-row>
@@ -174,6 +180,7 @@ const props = defineProps({
     }),
   },
 });
+const original = ref([]); // 原始数据
 const data = ref([]);
 const leftData = ref([]);
 const rightData = ref([]);
@@ -312,14 +319,14 @@ const handleCheckedChange = (type, item) => {
 const handleSearch = (type, val) => {
   switch (type) {
     case "left":
-      leftData.value = data.value.filter((item) => {
+      data.value = original.value.filter((item) => {
         return item[options.label].toLowerCase().includes(val.toLowerCase());
       });
       const target = leftListRef.value;
       if (target) {
         target.scrollTop = 0;
       }
-      setLeftVittual();
+      setLeftVitual();
       break;
     case "right":
       const find = data.value.find(
@@ -338,11 +345,11 @@ const handleSearch = (type, val) => {
 const handleActiveItem = (item) => {
   active.value = item;
   rightData.value = item[options.children];
-  setRightVittual();
+  setRightVitual();
   setRightChecked();
 };
 
-const setLeftVittual = () => {
+const setLeftVitual = () => {
   if (props.isVirtual) {
     // 滚动高度
     scrollLeftHeight.value = data.value.length * props.lineHeight;
@@ -354,7 +361,7 @@ const setLeftVittual = () => {
   }
 };
 
-const setRightVittual = () => {
+const setRightVitual = () => {
   const data = active.value[options.children];
   if (props.isVirtual && !!data?.length) {
     // 滚动高度
@@ -382,8 +389,11 @@ const handleConfirm = () => {
 watch(
   () => props.dataSource,
   (val) => {
-    leftData.value = data.value = [...cloneDeep(props.dataSource)];
-    setLeftVittual();
+    leftData.value =
+      data.value =
+      original.value =
+        [...cloneDeep(props.dataSource)];
+    setLeftVitual();
   }
 );
 
@@ -442,52 +452,52 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.selector__wrapper {
+.selector_wrapper {
   --wrap-height: 450px;
   --wrap-width: 600px;
   --item-height: 45px;
   --scroll-left-height: 450px;
   --scroll-right-height: 450px;
   width: var(--wrap-width);
-  .selector__body {
+  .selector_wrapper__body {
     display: flex;
     overflow: hidden;
     border: 1px solid #eee;
     border-radius: 5px;
   }
 }
-.selector__right {
+.selector_body__right {
   border-left: 1px solid #eee;
 }
-.selector__left__header,
-.selector__right__header {
+.selector_body__left__header,
+.selector_body__right__header {
   line-height: 45px;
   padding: 0 20px;
   border-bottom: 1px solid #eee;
 }
-.selector__left__search,
-.selector__right__search {
+.selector_body__left__search,
+.selector_body__right__search {
   padding: 10px 20px;
 }
-.selector__left__header__title,
-.selector__right__header__title {
+.selector_body__left__header__title,
+.selector_body__right__header__title {
   font-weight: 600;
   font-size: 16px;
 }
-.selector__left__list,
-.selector__right__list {
+.selector_body__left__list,
+.selector_body__right__list {
   height: var(--wrap-height);
   overflow-y: auto;
 }
-.selector__left__list,
-.selector__right__list {
+.selector_body__left__list,
+.selector_body__right__list {
   padding: 0 20px;
-  .selector__left__item,
-  .selector__right__item {
+  .selector_body__left__item,
+  .selector_body__right__item {
     line-height: var(--item-height);
   }
-  .selector__left__item__label,
-  .selector__right__item__label {
+  .selector_body__left__item__label,
+  .selector_body__right__item__label {
     margin-left: 10px;
     cursor: pointer;
     &.active {
@@ -496,8 +506,8 @@ onUnmounted(() => {
   }
 }
 /* 虚拟滚动 */
-.selector__wrapper.is__virtual .selector__list {
-  .selector__list__virtual {
+.selector_wrapper.is_virtual .selector_body__list {
+  .selector_body__list__virtual {
     position: relative;
     z-index: 1;
     width: 100%;
@@ -508,7 +518,7 @@ onUnmounted(() => {
     &.right__virtual {
       height: var(--scroll-right-height);
     }
-    .selector__item {
+    .selector_body__list__item {
       position: absolute;
       line-height: var(--item-height);
     }

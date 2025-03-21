@@ -1,14 +1,23 @@
 <template>
-  <div style="display: flex; justify-content: center; align-items: center">
-    <selector 
-      :dataSource="data" 
+  <div class="f_c_c p20">
+    <!-- <kxcSelector
+      :dataSource="data"
       :options="{
         key: 'id',
         label: 'name',
         children: 'children',
       }"
       @confirm="handleConfirm"
-    ></selector>
+    /> -->
+    <kxcTransfer
+      :dataSource="data"
+      :options="{
+        key: 'id',
+        label: 'name',
+        children: 'children',
+      }"
+      @confirm="handleConfirm"
+    />
   </div>
 </template>
 <script setup>
@@ -18,7 +27,7 @@ const data = ref([]);
 
 const init = () => {
   const list = [],
-    total = Math.ceil(Math.random() * 10) + 10;
+    total = Math.ceil(Math.random() * 100) + 100;
   for (let i = 0; i < total; i++) {
     let obj = {
       id: `id_${i}`,
