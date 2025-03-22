@@ -9,7 +9,7 @@
       }"
       @confirm="handleConfirm"
     /> -->
-    <kxcTransfer
+    <!-- <kxcTransfer
       :dataSource="data"
       :options="{
         key: 'id',
@@ -17,7 +17,8 @@
         children: 'children',
       }"
       @confirm="handleConfirm"
-    />
+    /> -->
+    <kxcCropper />
   </div>
 </template>
 <script setup>
