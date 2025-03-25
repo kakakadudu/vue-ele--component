@@ -2,7 +2,6 @@
   <div class="image-cropper f_s_b">
     <div>
       <el-upload
-        ref="uploadRef"
         class="upload-image"
         action="#"
         :auto-upload="false"
@@ -23,6 +22,7 @@
         </template>
       </el-upload>
       <div
+        ref="cropperRef"
         class="cropper-bg"
         :style="{
           width: `${option.width}px`,
@@ -40,12 +40,15 @@
           <img
             class="cropper-image"
             :src="option.imageSrc"
-            ref="imageRef"
-            @load="handleImageLoad"
+            @load="startDrawImage"
           />
           <canvas ref="canvasRef"></canvas>
           <div class="crop-overlay">
-            <div class="crop-area" :style="cropAreaStyle"></div>
+            <div
+              class="crop-area"
+              :style="cropAreaStyle"
+              @mousedown="startDrag"
+            ></div>
           </div>
         </div>
       </div>
@@ -62,7 +65,17 @@
         <el-button @click="handleRotate(90)">
           <el-icon><RefreshRight /></el-icon>
         </el-button>
-        <el-button type="primary">重新上传</el-button>
+        <el-upload
+          class="upload-image ml12"
+          action="#"
+          :auto-upload="false"
+          :show-file-list="false"
+          :on-change="handleFileChange"
+        >
+          <template #trigger>
+            <el-button type="primary">重新上传</el-button>
+          </template>
+        </el-upload>
       </div>
     </div>
     <div class="preview-image ml40">
@@ -85,41 +98,72 @@
 
 <script setup>
 import { ElMessage } from "element-plus";
-import { reactive, ref, computed } from "vue";
+import { watch, reactive, ref, computed, onMounted, onUnmounted } from "vue";
 import {
   Plus,
   Minus,
   RefreshLeft,
   RefreshRight,
-  Refresh,
 } from "@element-plus/icons-vue";
 
-const option = reactive({
+const props = defineProps({
+  // 裁剪框宽度
+  cropWidth: {
+    type: Number,
+    default: 300,
+  },
+  // 裁剪框高度
+  cropHeight: {
+    type: Number,
+    default: 400,
+  },
+  // 图片地址
+  imageSrc: {
+    type: String,
+    default: "",
+  },
+});
+
+const cw = computed(() => {
+  return props.cropWidth;
+});
+const ch = computed(() => {
+  return props.cropHeight;
+});
+
+const option = ref({
   width: 500, // 容器宽
   height: 500, // 容器高
   imageSrc: null, // 图片地址
   croppedImageSrc: null, // 裁剪后的图片地址
-  cropStartX: 0, // 裁剪框起始点 x 坐标
-  cropStartY: 0, // 裁剪框起始点 y 坐标
-  cropWidth: 300, // 裁剪框宽度
-  cropHeight: 400, // 裁剪框高度
-  isCropping: false, // 是否正在裁剪
+  cropStartX: 100, // 裁剪框起始点 x 坐标
+  cropStartY: 50, // 裁剪框起始点 y 坐标
+  cropWidth: cw.value || 300, // 裁剪框宽度
+  cropHeight: ch.value || 400, // 裁剪框高度
   imageWidth: 0, // 图片原始宽
   imageHeight: 0, // 图片原始高
   rotation: 0, // 旋转角度
   scale: 1, // 缩放比例
 });
-const imageRef = ref(null);
+
+const cropperRef = ref(null);
 const canvasRef = ref(null);
-const uploadRef = ref(null);
+const dragOption = reactive({
+  isDragging: false,
+  startX: 0,
+  startY: 0,
+  direction: "",
+  dragCount: 0,
+  right: 0,
+});
 
 // 计算剪裁框的位置和大小
 const cropAreaStyle = computed(() => {
   return {
-    width: `${option.cropWidth}px`,
-    height: `${option.cropHeight}px`,
-    left: `${option.cropStartX}px`,
-    top: `${option.cropStartY}px`,
+    width: `${option.value.cropWidth}px`,
+    height: `${option.value.cropHeight}px`,
+    left: `${option.value.cropStartX}px`,
+    top: `${option.value.cropStartY}px`,
   };
 });
 
@@ -135,80 +179,81 @@ const handleFileChange = (rawFile) => {
       ElMessage.warning("图片大小不超过 2MB！");
       return;
     }
-    option.imageSrc = URL.createObjectURL(raw);
+    option.value.imageSrc = URL.createObjectURL(raw);
   } else {
     ElMessage.warning("请重新选择图片！");
   }
-};
-const handleImageLoad = () => {
-  startDrawImage();
 };
 const startDrawImage = () => {
   const canvas = canvasRef.value;
   const ctx = canvas.getContext("2d");
   const image = new Image();
-  image.src = option.imageSrc;
+  image.src = option.value.imageSrc;
 
   image.onload = () => {
-    option.imageWidth = image.width;
-    option.imageHeight = image.height;
+    option.value.imageWidth = image.width;
+    option.value.imageHeight = image.height;
 
     // 根据缩放比例调整 Canvas 大小
-    canvas.width = option.width * option.scale;
-    canvas.height = option.height * option.scale;
+    canvas.width = option.value.width * option.value.scale;
+    canvas.height = option.value.height * option.value.scale;
 
     // 根据旋转角度调整 Canvas 大小
-    if (option.rotation % 180 === 90) {
-      canvas.width = option.height;
-      canvas.height = option.width;
+    if (option.value.rotation % 180 === 90) {
+      canvas.width = option.value.height;
+      canvas.height = option.value.width;
     } else {
-      canvas.width = option.width;
-      canvas.height = option.height;
+      canvas.width = option.value.width;
+      canvas.height = option.value.height;
     }
 
-    const offsetX = (option.width - option.cropWidth) / 2;
-    const offsetY = (option.height - option.cropHeight) / 2;
+    const offsetX = (option.value.width - option.value.cropWidth) / 2;
+    const offsetY = (option.value.height - option.value.cropHeight) / 2;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // 旋转图片 缩放图片
     ctx.save();
     ctx.translate(canvas.width / 2, canvas.height / 2);
-    ctx.rotate((option.rotation * Math.PI) / 180);
-    ctx.scale(option.scale, option.scale);
-    ctx.drawImage(image, -image.width / 2, -image.height / 2);
+    ctx.rotate((option.value.rotation * Math.PI) / 180);
+    ctx.scale(option.value.scale, option.value.scale);
+    ctx.drawImage(
+      image,
+      -option.value.imageWidth / 2,
+      -option.value.imageHeight / 2
+    );
     ctx.restore();
 
     // 调整裁剪框位置
-    option.cropStartX = offsetX;
-    option.cropStartY = offsetY;
+    option.value.cropStartX = offsetX;
+    option.value.cropStartY = offsetY;
 
     handleCropImage();
   };
 };
 
 // 旋转图片
-const handleRotate = (direction) => {
-  if (direction === "left") {
-    option.rotation -= 90;
+const handleRotate = (dir) => {
+  if (dir === "left") {
+    option.value.rotation -= 90;
   } else {
-    option.rotation += 90;
+    option.value.rotation += 90;
   }
-  option.rotation %= 360; // 确保旋转角度在 0-360 度之间
+  option.value.rotation %= 360; // 确保旋转角度在 0-360 度之间
   startDrawImage();
 };
 
 // 缩放图片
-const handleZoom = (direction) => {
-  if (direction === "in") {
-    option.scale += 0.1;
+const handleZoom = (dir) => {
+  if (dir === "in") {
+    option.value.scale += 0.1;
   } else {
-    option.scale -= 0.1;
+    option.value.scale -= 0.1;
     if (
-      option.imageWidth * option.scale <= option.cropWidth ||
-      option.imageHeight * option.scale <= option.cropHeight
+      option.value.imageWidth * option.value.scale <= option.value.cropWidth ||
+      option.value.imageHeight * option.value.scale <= option.value.cropHeight
     ) {
-      option.scale += 0.1;
+      option.value.scale += 0.1;
       return;
     }
   }
@@ -219,24 +264,67 @@ const handleCropImage = () => {
   const canvas = canvasRef.value;
 
   const croppedCanvas = document.createElement("canvas");
-  croppedCanvas.width = option.cropWidth;
-  croppedCanvas.height = option.cropHeight;
+  croppedCanvas.width = option.value.cropWidth;
+  croppedCanvas.height = option.value.cropHeight;
 
   const croppedCtx = croppedCanvas.getContext("2d");
   croppedCtx.drawImage(
     canvas,
-    option.cropStartX,
-    option.cropStartY,
-    option.cropWidth,
-    option.cropHeight,
+    option.value.cropStartX,
+    option.value.cropStartY,
+    option.value.cropWidth,
+    option.value.cropHeight,
     0,
     0,
-    option.cropWidth,
-    option.cropHeight
+    option.value.cropWidth,
+    option.value.cropHeight
   );
 
-  option.croppedImageSrc = croppedCanvas.toDataURL("image/png");
+  option.value.croppedImageSrc = croppedCanvas.toDataURL("image/png");
 };
+
+// 开始拖动
+const startDrag = (event) => {
+  dragOption.isDragging = true;
+
+  dragOption.startX = event.clientX - option.value.cropStartX;
+  dragOption.startY = event.clientY - option.value.cropStartY;
+
+  document.addEventListener("mousemove", handleDrag);
+  document.addEventListener("mouseup", stopDrag);
+};
+// 拖动中
+const handleDrag = (event) => {
+  if (dragOption.isDragging) {
+    const x = event.clientX - dragOption.startX;
+    const y = event.clientY - dragOption.startY;
+    option.value.cropStartX = x;
+    option.value.cropStartY = y;
+    dragOption.dragCount++;
+  }
+};
+// 停止拖动
+const stopDrag = () => {
+  dragOption.isDragging = false;
+  document.removeEventListener("mousemove", handleDrag);
+  document.removeEventListener("mouseup", stopDrag);
+  if (dragOption.dragCount) {
+    handleCropImage();
+    dragOption.dragCount = 0;
+  }
+};
+
+// 组件挂载时添加事件监听器
+onMounted(() => {
+  document.addEventListener("mousemove", handleDrag);
+  document.addEventListener("mouseup", stopDrag);
+});
+
+// 组件卸载时移除事件监听器
+onUnmounted(() => {
+  document.removeEventListener("mousemove", handleDrag);
+  document.removeEventListener("mouseup", stopDrag);
+});
 </script>
 
 <style scoped>
@@ -272,7 +360,7 @@ const handleCropImage = () => {
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7); /* 遮罩层 */
   pointer-events: auto; /* 允许剪裁框区域响应鼠标事件 */
   cursor: move;
-  transition: all 0.3s ease-in-out;
+  /* transition: all 0.3s ease-in-out; */
 }
 .cropped-image {
   box-shadow: 0 0 20px 10px rgba(0, 0, 0, 0.1);

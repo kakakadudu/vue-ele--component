@@ -18,7 +18,7 @@
       }"
       @confirm="handleConfirm"
     /> -->
-    <kxcCropper />
+    <kxcCropper :cropWidth="400" :cropHeight="500" />
   </div>
 </template>
 <script setup>
